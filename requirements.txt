@@ -1,0 +1,3 @@
+# No third-party packages: the project uses only the Python standard library.
+# (Optional) Uncomment if you use the real Anthropic backend in llm.py:
+# anthropic
