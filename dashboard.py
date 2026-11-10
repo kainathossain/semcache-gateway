@@ -53,7 +53,7 @@ def export_html(metrics: MetricsStore, path: str = "dashboard.html") -> str:
     return path
 
 
-def serve(metrics: MetricsStore, port: int = 8765, background: bool = False):
+def serve(metrics: MetricsStore, port: int = 8765, background: bool = False, host: str = "127.0.0.1"):
     class H(BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path.startswith("/api/stats"):
@@ -69,9 +69,9 @@ def serve(metrics: MetricsStore, port: int = 8765, background: bool = False):
         def log_message(self, *a):
             pass
 
-    srv = ThreadingHTTPServer(("127.0.0.1", port), H)
+    srv = ThreadingHTTPServer((host, port), H)
     if background:
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         return srv
-    print(f"Dashboard on http://127.0.0.1:{port}")
+    print(f"Dashboard on http://{host}:{port}", flush=True)
     srv.serve_forever()
