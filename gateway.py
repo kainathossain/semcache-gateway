@@ -43,7 +43,7 @@ class Gateway:
             e = look.entry
             cost = embed_cost
             # Baseline = what the naive setup (always the large model) would have paid.
-            baseline = LARGE.cost(in_tok, e.out_tokens)
+            baseline = self.large.spec.cost(in_tok, e.out_tokens)
             latency = time.perf_counter() - t0 + 0.005  # + nominal vector-store round trip
             resp = Response(e.response, "hit", "cache", cost, baseline, latency, look.score)
             out_tok, outcome, model = e.out_tokens, "hit", "cache"
@@ -57,7 +57,7 @@ class Gateway:
                 cost += self.large.spec.cost(big.in_tokens, big.out_tokens)
                 latency += big.latency_s
                 comp, outcome, model = big, "escalated", self.large.spec.name
-            baseline = LARGE.cost(comp.in_tokens, comp.out_tokens)
+            baseline = self.large.spec.cost(comp.in_tokens, comp.out_tokens)
             self.cache.put(query, comp.text, comp.out_tokens, namespace, vec=vec)
             out_tok = comp.out_tokens
             resp = Response(comp.text, outcome, model, cost, baseline, latency, look.score)
