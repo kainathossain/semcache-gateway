@@ -2,6 +2,7 @@
 to a previous one. Brute-force scan here; swap the scan for an ANN index (FAISS, HNSW,
 pgvector) once you pass ~100k entries."""
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -57,11 +58,12 @@ class SemanticCache:
         self.clock = clock
         self._entries: dict[int, CacheEntry] = {}
         self._next_id = 1
+        self._lock = threading.RLock()
 
     def __len__(self) -> int:
         return len(self._entries)
 
-    def lookup(self, query: str, namespace: str = "default", vec: Optional[list[float]] = None) -> Lookup:
+    def _lookup(self, query: str, namespace: str = "default", vec: Optional[list[float]] = None) -> Lookup:
         vec = vec or self.embedder.embed(query)
         now = self.clock()
         best, best_score = None, 0.0
@@ -87,7 +89,7 @@ class SemanticCache:
             return Lookup(best, best_score)
         return Lookup(None, best_score)
 
-    def put(self, query: str, response: str, out_tokens: int, namespace: str = "default",
+    def _put(self, query: str, response: str, out_tokens: int, namespace: str = "default",
             ttl: Optional[float] = None, vec: Optional[list[float]] = None, **meta) -> CacheEntry:
         vec = vec or self.embedder.embed(query)
         now = self.clock()
@@ -100,9 +102,22 @@ class SemanticCache:
         self._next_id += 1
         return e
 
-    def invalidate(self, namespace: Optional[str] = None) -> int:
+    def _invalidate(self, namespace: Optional[str] = None) -> int:
         """Drop a namespace (e.g. when the underlying corpus version changes) or everything."""
         ids = [i for i, e in self._entries.items() if namespace is None or e.namespace == namespace]
         for i in ids:
             del self._entries[i]
         return len(ids)
+
+    # Public, thread-safe API (the server handles requests on several threads).
+    def lookup(self, *a, **k) -> Lookup:
+        with self._lock:
+            return self._lookup(*a, **k)
+
+    def put(self, *a, **k) -> CacheEntry:
+        with self._lock:
+            return self._put(*a, **k)
+
+    def invalidate(self, *a, **k) -> int:
+        with self._lock:
+            return self._invalidate(*a, **k)
