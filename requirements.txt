@@ -1,3 +1,2 @@
-# No third-party packages: the project uses only the Python standard library.
-# (Optional) Uncomment if you use the real Anthropic backend in llm.py:
-# anthropic
+# Needed only when ANTHROPIC_API_KEY is set (real models). The mock backend needs nothing.
+anthropic
